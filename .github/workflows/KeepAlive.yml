@@ -8,9 +8,11 @@ on:
 jobs:
   auto_renew:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: 'Checkout codes'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: 'Avoid Github Workflow being suspended'
         run: echo $(cat /proc/sys/kernel/random/uuid) > UUID.txt
@@ -20,13 +22,14 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add .
-          git diff --quiet && git diff --staged --quiet || git commit -am '是否继续白嫖：[是] —— 继续白嫖成功！'
-          echo ::set-output name=status::success
+          git add UUID.txt
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m '是否继续白嫖：[是] —— 继续白嫖成功！'
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
            
       - name: 'GitHub Push'
-        if: steps.commit.output.status != 'success'
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+        if: steps.commit.outputs.changed == 'true'
+        run: git push origin HEAD:${{ github.ref_name }}

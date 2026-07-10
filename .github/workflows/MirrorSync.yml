@@ -9,12 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout codes'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: 'Sync'
         id: commit
+        env:
+          GITEA_USERNAME: ${{ secrets.GITEA_USERNAME }}
+          GITEA_PASSWORD: ${{ secrets.GITEA_PASSWORD }}
         run: |
-          git fetch --unshallow
+          if [ -z "$GITEA_USERNAME" ] || [ -z "$GITEA_PASSWORD" ]; then
+            echo "Gitea secrets are not configured; skipping mirror sync."
+            exit 0
+          fi
           git checkout master
-          git remote add gitea https://${{ secrets.GITEA_USERNAME }}:${{ secrets.GITEA_PASSWORD }}@git.bili33.top/GamerNoTitle/MHYY.git   
+          git remote add gitea https://${GITEA_USERNAME}:${GITEA_PASSWORD}@git.bili33.top/GamerNoTitle/MHYY.git
           git push gitea master
